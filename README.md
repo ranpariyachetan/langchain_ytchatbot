@@ -1,0 +1,1 @@
+This repository was created as part of learning how to create RAG using langchain thru [Youtube video](https://www.youtube.com/watch?v=J5_-l7WIO_w) from [CampusX channel](https://www.youtube.com/@campusx-official).
