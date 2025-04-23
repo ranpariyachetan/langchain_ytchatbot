@@ -4,3 +4,6 @@ numpy
 langchain-openai
 openai
 chroma
+youtube-transcript-api
+langchain-community
+chromadb
