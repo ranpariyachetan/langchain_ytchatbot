@@ -1,9 +1,10 @@
 langchain
 pandas
 numpy
+youtube-transcript-api
+langchain-core
 langchain-openai
+langchain-community
 openai
 chroma
-youtube-transcript-api
-langchain-community
 chromadb
