@@ -1,7 +1,8 @@
-langchain
+streamlit
 pandas
 numpy
 youtube-transcript-api
+langchain
 langchain-core
 langchain-openai
 langchain-community
