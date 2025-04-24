@@ -1,10 +1,13 @@
 import streamlit as st
-import ytchatter
 from ytchatter import YTChatter
+from langchain_community.chat_message_histories import StreamlitChatMessageHistory
 
+# Initialize the chat message history
+chat_history = StreamlitChatMessageHistory()
 
-video_id="hF-7eKtzAHM"
 chatter = YTChatter()
+
+st.session_state.conversation = []
 
 st.set_page_config(page_title="YT Chatter", page_icon=":guardsman:", layout="wide")
 
@@ -20,10 +23,22 @@ video_id = st.text_input(
 
 if video_id:
     chatter.start_chatting(video_id)
-    st.chat_input(
+    question = st.chat_input(
         "Ask a question about the video",
         key="question",
     )
+    if question:
+        st.session_state.conversation.append({"role": "user", "content": question})
+        with st.spinner("Thinking..."):
+            answer = chatter.ask_question(question)
+        st.session_state.conversation.append({"role": "assistant", "content": answer})
+        
+        for message in st.session_state.conversation:
+            if message["role"] == "user":
+                st.chat_message("user").markdown(message["content"])
+            else:
+                st.chat_message("assistant").markdown(message["content"])
+    
 else:
     if "video_id" not in st.session_state:
         st.session_state.video_id = ""
