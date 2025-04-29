@@ -9,3 +9,5 @@ langchain-community
 openai
 chroma
 chromadb
+youtube_urls_validator
+pytube
