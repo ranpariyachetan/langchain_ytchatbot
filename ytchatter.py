@@ -5,6 +5,9 @@ from langchain_openai import ChatOpenAI
 from langchain_core.runnables import  RunnableParallel, RunnablePassthrough, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
 
+from youtube_urls_validator import validate_url
+from pytube import extract
+
 load_dotenv()
 
 class YTChatter:
@@ -38,6 +41,7 @@ class YTChatter:
 
         self.final_chain = self.parallel_chain | self.prompt_template | self.llm | self.parser
 
+    
     def ask_question(self, question):
         if self.vector_store is None or self.retriever is None:
             raise ValueError("You need to start chatting first by calling start_chatting with a video ID.")
@@ -45,6 +49,14 @@ class YTChatter:
         docs = self.retriever.invoke(question)
         response = self.final_chain.invoke(question)
         return response
+
+def extract_video_id(url):
+    try:
+        validate_url(url)
+        video_id = extract.video_id(url)
+        return video_id
+    except Exception as e:
+        return None
 
 def prepare_transcript(transcripts):
     transcripts_text = ' '.join([t["text"] for t in transcripts])
