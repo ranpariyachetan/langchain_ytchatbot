@@ -12,9 +12,8 @@ load_dotenv()
 
 class YTChatter:
     def __init__(self):
-        self.vector_store = None
         self.retriever = None
-        self.llm = ChatOpenAI()
+        self.vector_store = None
         self.parser = StrOutputParser()
         self.prompt_template = PromptTemplate(
             input_variables=["context", "question"],
@@ -28,25 +27,20 @@ class YTChatter:
             """,
         )
 
-    def start_chatting(self, video_id):
-        ytt_api = YouTubeTranscriptApi()
-        transcripts = ytt_api.get_transcript(video_id)
-        transcript_text = prepare_transcript(transcripts)
-        self.vector_store = create_vector_store(transcript_text)
-        self.retriever = self.vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 4})
+    def start_chatting(self, vector_store, llm):
+        print("Starting chat...")
+        self.retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 4})
         self.parallel_chain = RunnableParallel({
             "context": self.retriever | RunnableLambda(format_docs),
             "question": RunnablePassthrough()
         })
 
-        self.final_chain = self.parallel_chain | self.prompt_template | self.llm | self.parser
+        self.final_chain = self.parallel_chain | self.prompt_template | llm | self.parser
 
-    
     def ask_question(self, question):
-        if self.vector_store is None or self.retriever is None:
+        if self.retriever is None:
             raise ValueError("You need to start chatting first by calling start_chatting with a video ID.")
 
-        docs = self.retriever.invoke(question)
         response = self.final_chain.invoke(question)
         return response
 
@@ -58,6 +52,16 @@ def extract_video_id(url):
     except Exception as e:
         return None
 
+def get_video_transcript(video_id):
+    ytt_api = YouTubeTranscriptApi()
+    try:
+        transcripts = ytt_api.get_transcript(video_id)
+        transcript_text = prepare_transcript(transcripts)
+        return transcript_text
+    except Exception as e:
+        print(f"Error fetching transcripts: {e}")
+        return None
+
 def prepare_transcript(transcripts):
     transcripts_text = ' '.join([t["text"] for t in transcripts])
     transcripts_text = transcripts_text.replace('\n', ' ')
@@ -65,7 +69,7 @@ def prepare_transcript(transcripts):
     transcripts_text = transcripts_text.replace('♪', '')
     return transcripts_text
 
-def create_vector_store(transcript_text):
+def create_vector_store(transcript_text, video_id):
     from langchain_openai import OpenAIEmbeddings
     from langchain_community.vectorstores import Chroma
     from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -81,8 +85,7 @@ def create_vector_store(transcript_text):
     return Chroma.from_documents(
         documents,
         embeddings,
-        collection_name="youtube_transcript")
-
+        collection_name=video_id)
 
 def format_docs(retrieved_docs):
     context_text = "\n\n".join([doc.page_content for doc in retrieved_docs])

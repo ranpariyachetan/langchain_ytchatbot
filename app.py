@@ -1,11 +1,18 @@
+from langchain_openai import ChatOpenAI
 import streamlit as st
-from ytchatter import YTChatter, extract_video_id
+from ytchatter import YTChatter, extract_video_id, get_video_transcript, create_vector_store
 from langchain_community.chat_message_histories import StreamlitChatMessageHistory
+
+from dotenv import load_dotenv
+load_dotenv()
 
 # Initialize the chat message history
 chat_history = StreamlitChatMessageHistory()
 
 chatter = YTChatter()
+
+if "llm" not in st.session_state:
+    st.session_state.llm = ChatOpenAI(model="gpt-3.5-turbo", temperature=0)
 
 if "conversation" not in st.session_state:
     st.session_state.conversation = []
@@ -29,20 +36,27 @@ for message in st.session_state.conversation:
 if video_info:
     video_id = extract_video_id(video_info)
     if video_id:
-        chatter.start_chatting(video_id)
-        question = st.chat_input(
-            "Ask a question about the video",
-            key="question",
-        )
-        if question:
-            st.chat_message("user").markdown(question)
-            st.session_state.conversation.append({"role": "user", "content": question})
-            with st.spinner("Thinking..."):
-                answer = chatter.ask_question(question)
+        transcripts = get_video_transcript(video_id)
+        
+        if transcripts:
+            vector_store = create_vector_store(transcripts, video_id)
+            chatter.start_chatting(vector_store, st.session_state.llm)
 
-            with st.chat_message("assistant"):
-                st.markdown(answer)
-            st.session_state.conversation.append({"role": "assistant", "content": answer})
+            question = st.chat_input(
+                "Ask a question about the video",
+                key="question",
+            )
+            if question:
+                st.chat_message("user").markdown(question)
+                st.session_state.conversation.append({"role": "user", "content": question})
+                with st.spinner("Thinking..."):
+                    answer = chatter.ask_question(question)
+
+                with st.chat_message("assistant"):
+                    st.markdown(answer)
+                st.session_state.conversation.append({"role": "assistant", "content": answer})
+        else:
+            st.error("Could not retrieve information for the provided video ID.")
     else:
         st.error("Invalid YouTube URL or video ID. Please enter a valid one.")
 else:
