@@ -61,7 +61,7 @@ def get_video_transcript(video_id):
     ytt_api = YouTubeTranscriptApi()
     try:
         print(f"Fetching transcripts for video ID: {video_id}")
-        transcripts = ytt_api.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
+        transcripts = ytt_api.fetch(video_id, languages=['en','en-US', 'en-GB'])
         transcript_text = prepare_transcript(transcripts)
         return transcript_text
     except Exception as e:
