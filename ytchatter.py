@@ -7,7 +7,7 @@ from langchain_core.output_parsers import StrOutputParser
 
 from youtube_urls_validator import validate_url
 from pytube import extract
-
+import re
 load_dotenv()
 
 class YTChatter:
@@ -18,7 +18,7 @@ class YTChatter:
         self.prompt_template = PromptTemplate(
             input_variables=["context", "question"],
             template="""
-            You are helpful assistant.
+            You are a helpful assistant.
             Answer ONLY from the provided transcript context.
             If the context is not sufficient to answer the question, say "I don't know".
 
@@ -46,8 +46,13 @@ class YTChatter:
 
 def extract_video_id(url):
     try:
+        strx = "([A-Za-z0-9._%-]*)(\\&\\S+)?$"
+        if re.match(strx, url):
+            print("Patterned matched. Returninng videoid", url)
+            return url
         validate_url(url)
         video_id = extract.video_id(url)
+        print(f"Reeturning extracted Video ID: {video_id} from URL.")
         return video_id
     except Exception as e:
         return None
@@ -55,7 +60,8 @@ def extract_video_id(url):
 def get_video_transcript(video_id):
     ytt_api = YouTubeTranscriptApi()
     try:
-        transcripts = ytt_api.get_transcript(video_id)
+        print(f"Fetching transcripts for video ID: {video_id}")
+        transcripts = ytt_api.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
         transcript_text = prepare_transcript(transcripts)
         return transcript_text
     except Exception as e:
