@@ -1,7 +1,6 @@
 from dotenv import load_dotenv
-from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound
 from langchain.prompts import PromptTemplate
-from langchain_openai import ChatOpenAI
 from langchain_core.runnables import  RunnableParallel, RunnablePassthrough, RunnableLambda
 from langchain_core.output_parsers import StrOutputParser
 
@@ -61,15 +60,23 @@ def get_video_transcript(video_id):
     ytt_api = YouTubeTranscriptApi()
     try:
         print(f"Fetching transcripts for video ID: {video_id}")
-        transcripts = ytt_api.fetch(video_id, languages=['en','en-US', 'en-GB'])
-        transcript_text = prepare_transcript(transcripts)
+        transcripts = YouTubeTranscriptApi.list_transcripts(video_id)
+
+        transcript = transcripts.find_transcript(['en', 'en-US', 'en-GB'])
+        print(f"Found transcript for video ID: {video_id} in languages: {transcript.language}, {transcript.language_code}") 
+
+        transcripts = transcript.fetch()
+        transcript_text = prepare_transcript(transcripts.snippets)
         return transcript_text
+    except NoTranscriptFound as e:
+        print(f"No transcript found for video ID: {video_id} for {e._requested_language_codes}")
+        return None
     except Exception as e:
         print(f"Error fetching transcripts: {e}")
         return None
 
 def prepare_transcript(transcripts):
-    transcripts_text = ' '.join([t["text"] for t in transcripts])
+    transcripts_text = ' '.join([t.text for t in transcripts])
     transcripts_text = transcripts_text.replace('\n', ' ')
     transcripts_text = transcripts_text.replace('  ', ' ')
     transcripts_text = transcripts_text.replace('♪', '')
